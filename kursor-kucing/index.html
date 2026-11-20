@@ -1,0 +1,291 @@
+<title>Kursor Kucing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Inter:wght@400;500&display=swap">
+<style>
+  /* Layout: satu layar penuh, teks di kiri atas, kucing mengikuti pointer di atas segalanya. */
+  :root {
+    --bg: #e8eef3;
+    --fg: #1d2630;
+    --muted: #55626f;
+    --panel: #f6f9fb;
+    --line: #c7d2dc;
+    --accent: #d9480f;
+    --accent-fg: #ffffff;
+    --outline: #3a2a20;
+    --paw: rgba(29, 38, 48, 0.22);
+    --font-display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12171c; --fg: #e6edf3; --muted: #9aa8b5; --panel: #1b222a; --line: #2f3a45;
+      --accent: #ff8a4c; --accent-fg: #1a0f08; --outline: #f1e6dc; --paw: rgba(230, 237, 243, 0.2);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12171c; --fg: #e6edf3; --muted: #9aa8b5; --panel: #1b222a; --line: #2f3a45;
+    --accent: #ff8a4c; --accent-fg: #1a0f08; --outline: #f1e6dc; --paw: rgba(230, 237, 243, 0.2);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    padding-block: 32px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    overflow-x: hidden;
+  }
+  body.cat-on, body.cat-on * { cursor: none !important; }
+
+  main { max-width: 640px; display: grid; gap: 28px; min-width: 0; }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.2rem, 7vw, 3.4rem);
+    line-height: 1.05;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  p { margin: 0; max-width: 60ch; color: var(--muted); }
+  .hint {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 6px 12px;
+    border: 1px dashed var(--line);
+    border-radius: 999px;
+    font-size: 14px;
+    color: var(--fg);
+    transition: opacity .4s;
+  }
+  .hint.gone { opacity: 0; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    display: grid;
+    gap: 16px;
+  }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); min-width: 64px; }
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 2px solid var(--line);
+    background: var(--c);
+    padding: 0;
+  }
+  .swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .btn {
+    font: 500 14px var(--font-body);
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--fg);
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .count { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+
+  /* Kucing */
+  #cat {
+    position: fixed; left: 0; top: 0;
+    z-index: 50; pointer-events: none;
+    will-change: transform;
+  }
+  #cat .flip { position: relative; width: 0; height: 0; }
+  #cat svg { position: absolute; left: -88px; top: -38px; width: 120px; height: 90px; overflow: visible; }
+  body.cat-off #cat, body.cat-off .paw { display: none; }
+
+  .fur { fill: var(--fur); stroke: var(--outline); stroke-width: 2.2; stroke-linejoin: round; }
+  .fur-dark { fill: var(--fur-dark); stroke: var(--outline); stroke-width: 2.2; stroke-linejoin: round; }
+  .belly { fill: var(--belly); }
+  .tail { fill: none; stroke: var(--fur); stroke-width: 8; stroke-linecap: round; }
+  .tail-out { fill: none; stroke: var(--outline); stroke-width: 12.4; stroke-linecap: round; }
+  .eye { fill: var(--outline); }
+  .nose { fill: #f08aa0; }
+  .whisk { stroke: var(--outline); stroke-width: 1.2; stroke-linecap: round; }
+
+  .tailwrap { transform-box: fill-box; transform-origin: 100% 100%; animation: wag 1.6s ease-in-out infinite alternate; }
+  @keyframes wag { from { transform: rotate(-10deg); } to { transform: rotate(12deg); } }
+  .leg { transform-box: fill-box; transform-origin: 50% 0; }
+  #cat.moving .leg-a { animation: step .26s ease-in-out infinite alternate; }
+  #cat.moving .leg-b { animation: step .26s ease-in-out infinite alternate-reverse; }
+  @keyframes step { from { transform: rotate(-26deg); } to { transform: rotate(26deg); } }
+  #cat.hop svg { animation: hop .38s ease-out; }
+  @keyframes hop { 0% { transform: translateY(0); } 45% { transform: translateY(-28px); } 100% { transform: translateY(0); } }
+  #cat.moving .tailwrap { animation-duration: .7s; }
+
+  .meow {
+    position: fixed; z-index: 60; pointer-events: none;
+    font: 600 18px var(--font-display);
+    color: var(--accent-fg);
+    background: var(--accent);
+    padding: 4px 12px; border-radius: 14px 14px 14px 3px;
+    white-space: nowrap;
+    animation: float 1s ease-out forwards;
+  }
+  @keyframes float { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -46px); } }
+
+  .paw { position: fixed; z-index: 1; pointer-events: none; width: 14px; height: 14px; animation: fade 2.2s ease-out forwards; }
+  .paw svg { width: 100%; height: 100%; fill: var(--paw); display: block; }
+  @keyframes fade { from { opacity: 1; } to { opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tailwrap, #cat.moving .leg-a, #cat.moving .leg-b { animation: none; }
+    #cat.hop svg { animation: none; }
+    .paw { animation-duration: 1ms; }
+  }
+</style>
+
+<div id="cat" aria-hidden="true">
+  <div class="flip" id="flip">
+    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+      <g class="tailwrap">
+        <path class="tail-out" d="M24 54 C4 54 6 26 18 24"/>
+        <path class="tail" d="M24 54 C4 54 6 26 18 24"/>
+      </g>
+      <rect class="fur-dark leg leg-b" x="30" y="58" width="10" height="22" rx="5"/>
+      <rect class="fur-dark leg leg-a" x="68" y="58" width="10" height="22" rx="5"/>
+      <ellipse class="fur" cx="52" cy="50" rx="30" ry="18"/>
+      <ellipse class="belly" cx="56" cy="58" rx="18" ry="8"/>
+      <rect class="fur leg leg-a" x="40" y="60" width="10" height="22" rx="5"/>
+      <rect class="fur leg leg-b" x="78" y="60" width="10" height="22" rx="5"/>
+      <polygon class="fur" points="75,28 78,7 91,21"/>
+      <polygon class="fur" points="91,21 102,9 104,29"/>
+      <circle class="fur" cx="89" cy="38" r="18"/>
+      <circle class="eye" cx="83" cy="35" r="2.6"/>
+      <circle class="eye" cx="97" cy="35" r="2.6"/>
+      <path class="nose" d="M88 41 h6 l-3 3.6 z"/>
+      <path d="M91 44.6 v2.4 M91 47 q-3 2.6 -6 0 M91 47 q3 2.6 6 0" fill="none" stroke="var(--outline)" stroke-width="1.2" stroke-linecap="round"/>
+      <path class="whisk" d="M80 44 L68 42 M80 46 L69 49 M102 44 L114 42 M102 46 L113 49"/>
+    </svg>
+  </div>
+</div>
+
+<main>
+  <header>
+    <h1>Mouse Anda sekarang kucing</h1>
+    <p>Kucing ini mengikuti kursor ke mana pun Anda bergerak. Geser ke kiri dan ke kanan, lalu klik di mana saja.</p>
+    <span class="hint" id="hint">Gerakkan mouse (atau sentuh layar) untuk memanggil kucing</span>
+  </header>
+
+  <section class="panel" aria-label="Pengaturan kucing">
+    <div class="row">
+      <span class="label">Bulu</span>
+      <div class="swatches" id="swatches">
+        <button class="swatch" type="button" id="sw-oren" style="--c:#f0a35e" aria-label="Oranye" aria-pressed="true" data-fur="#f0a35e" data-dark="#d98a42" data-belly="#fbe3c4"></button>
+        <button class="swatch" type="button" id="sw-abu" style="--c:#aab4bf" aria-label="Abu-abu" aria-pressed="false" data-fur="#aab4bf" data-dark="#8794a1" data-belly="#e4e9ee"></button>
+        <button class="swatch" type="button" id="sw-hitam" style="--c:#3b3f47" aria-label="Hitam" aria-pressed="false" data-fur="#3b3f47" data-dark="#2a2d33" data-belly="#6b717c"></button>
+        <button class="swatch" type="button" id="sw-putih" style="--c:#f4efe9" aria-label="Putih" aria-pressed="false" data-fur="#f4efe9" data-dark="#ddd5cb" data-belly="#ffffff"></button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">Mengeong</span>
+      <span class="count" id="count">0</span>
+      <span style="color:var(--muted);font-size:14px">kali</span>
+    </div>
+    <div class="row">
+      <button class="btn primary" type="button" id="toggle">Kembalikan kursor biasa</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var body = document.body;
+  var cat = document.getElementById('cat');
+  var flip = document.getElementById('flip');
+  var hint = document.getElementById('hint');
+  var countEl = document.getElementById('count');
+  var toggle = document.getElementById('toggle');
+  var root = document.documentElement;
+
+  body.classList.add('cat-on');
+
+  var tx = window.innerWidth / 2, ty = window.innerHeight / 2;
+  var x = tx, y = ty, dir = 1, meows = 0, lastPaw = { x: x, y: y }, side = 1;
+  var words = ['Meong!', 'Meow!', 'Miaw~', 'Mrrp!', 'Nyaa!'];
+
+  function setFur(btn) {
+    root.style.setProperty('--fur', btn.dataset.fur);
+    root.style.setProperty('--fur-dark', btn.dataset.dark);
+    root.style.setProperty('--belly', btn.dataset.belly);
+  }
+  setFur(document.getElementById('sw-oren'));
+
+  document.getElementById('swatches').addEventListener('click', function (e) {
+    var btn = e.target.closest('.swatch');
+    if (!btn) return;
+    document.querySelectorAll('.swatch').forEach(function (s) { s.setAttribute('aria-pressed', s === btn ? 'true' : 'false'); });
+    setFur(btn);
+  });
+
+  toggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var off = body.classList.toggle('cat-off');
+    body.classList.toggle('cat-on', !off);
+    toggle.textContent = off ? 'Panggil kucing lagi' : 'Kembalikan kursor biasa';
+  });
+
+  function wake() { hint.classList.add('gone'); }
+
+  window.addEventListener('pointermove', function (e) { tx = e.clientX; ty = e.clientY; wake(); });
+  window.addEventListener('pointerdown', function (e) { tx = e.clientX; ty = e.clientY; wake(); });
+
+  window.addEventListener('pointerdown', function (e) {
+    if (body.classList.contains('cat-off')) return;
+    meows += 1;
+    countEl.textContent = meows;
+    var m = document.createElement('div');
+    m.className = 'meow';
+    m.textContent = words[Math.floor(Math.random() * words.length)];
+    m.style.left = e.clientX + 'px';
+    m.style.top = (e.clientY - 70) + 'px';
+    m.addEventListener('animationend', function () { m.remove(); });
+    document.body.appendChild(m);
+    cat.classList.remove('hop');
+    void cat.offsetWidth;
+    cat.classList.add('hop');
+  });
+
+  var pawSvg = '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="16" rx="6" ry="5"/><circle cx="5" cy="10" r="2.6"/><circle cx="10" cy="5.5" r="2.6"/><circle cx="16" cy="5.5" r="2.6"/><circle cx="20" cy="10" r="2.6"/></svg>';
+  function dropPaw(px, py) {
+    var p = document.createElement('div');
+    p.className = 'paw';
+    p.innerHTML = pawSvg;
+    p.style.left = px + 'px';
+    p.style.top = py + 'px';
+    p.addEventListener('animationend', function () { p.remove(); });
+    document.body.appendChild(p);
+  }
+
+  function tick() {
+    var dx = tx - x, dy = ty - y;
+    x += dx * 0.18;
+    y += dy * 0.18;
+    var speed = Math.hypot(dx, dy) * 0.18;
+    if (Math.abs(dx) > 6) dir = dx > 0 ? 1 : -1;
+    cat.classList.toggle('moving', speed > 0.9);
+    cat.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
+    flip.style.transform = 'scaleX(' + dir + ')';
+
+    if (!body.classList.contains('cat-off') && Math.hypot(x - lastPaw.x, y - lastPaw.y) > 64) {
+      side = -side;
+      dropPaw(x - dir * 24 + side * 6, y + 40 + side * 5);
+      lastPaw = { x: x, y: y };
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
